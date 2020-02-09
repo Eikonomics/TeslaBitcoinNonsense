@@ -1,0 +1,183 @@
+library(quantmod)
+library(tidyquant)
+library(tidyverse)
+library(ggplot2)
+# https://www.codingfinance.com/post/2018-03-27-download-price/
+
+
+
+options("getSymbols.warning4.0"=FALSE)
+options("getSymbols.yahoo.warning"=FALSE)
+# Downloading Apple price using quantmod
+
+BTC <-  tq_get("BTC-USD", 
+              from = '2017-01-01',
+              to = "2020-02-06",
+              get = "stock.prices") 
+
+BTC %>%
+  ggplot() +
+    aes(y = adjusted, x = date) +
+    geom_line()
+
+TSLA <-  tq_get("TSLA", 
+               from = '2017-01-01',
+               to = "2020-02-05",
+               get = "stock.prices") 
+
+TSLA$ticker <- "TSLA"
+BTC$ticker <- "BTC"
+
+TSLABTC <- TSLA
+
+TSLABTC <- rbind(TSLA,BTC)
+unique(TSLABTC$ticker)
+
+
+
+BTC2 <- BTC %>%
+  select(date,adjusted)
+BTC2 <- setNames(BTC2, c("date","BTC_price"))
+
+TSLA2 <- TSLA %>%
+  select(date,adjusted)
+TSLA2 <- setNames(TSLA2, c("date","TSLA_price"))
+
+Combo_data <- merge(TSLA2, BTC2, by.x = "date", by.y = "date")
+Legend <- scale_color_discrete(name = "", labels = c("Bitcoin", "Tesla"))
+  
+
+# plot recreated. all times
+Combo_data %>%
+ggplot() +
+  geom_line(aes(y = BTC_price, x = date, colour = eikonomics_colors[3]), size = 1) +
+  geom_line(aes(y = lead(TSLA_price, n = 548)*ScalingOfTSLA, x = date,colour = eikonomics_colors[1]), size = 1) +
+  scale_y_continuous(sec.axis = sec_axis(~./ScalingOfTSLA, name = "TSLA stock price (USD)")) +
+  theme_minimal() +
+  ylab("BTC price (USD)") + 
+  Legend +
+  theme(legend.position = "bottom")
+  
+
+
+  
+  ggsave(filename =  "1_PlotRecreated.png", path = "3_Analysis\\1_ChartsForBlog\\")
+  
+# TSLA Plot
+Combo_data %>%
+  ggplot() +
+  geom_line(aes(y = TSLA_price, x = date, colour = eikonomics_colors[1]), size = 1) +
+  theme_minimal() +
+  ylab("TSLA Price (USD)")  +
+  scale_x_date(limits = c(as.Date("2017-06-01"), as.Date("2020-02-05")))+
+  scale_color_discrete(name = "", labels = c("Tesla")) +
+  theme(legend.position = "bottom")
+
+
+  ggsave(filename =  "2_TeslaDataOnly.png", path = "3_Analysis\\1_ChartsForBlog\\")
+
+# BTC Plot
+Combo_data %>%
+  ggplot() +
+  geom_line(aes(y = BTC_price, x = date, colour = eikonomics_colors[3]), size = 1) +
+  theme_minimal() +
+  ylab("BTC Price (USD)")  +
+  scale_x_date(limits = c(as.Date("2017-06-01"), as.Date("2020-02-05"))) +
+  scale_color_discrete(name = "", labels = c("Bitcoin")) +
+  theme(legend.position = "bottom")
+
+
+  ggsave(filename =  "3_BitcoainDataOnly.png", path = "3_Analysis\\1_ChartsForBlog\\")
+
+# BTC overlay
+Combo_data %>%
+  ggplot() +
+  geom_line(aes(y = BTC_price, x = date, colour = eikonomics_colors[1]), size = 1) +
+  geom_line(aes(y = TSLA_price, x = date, colour = eikonomics_colors[3]), size = 1) +
+  theme_minimal() +
+  ylab("BTC Price (USD)")  +
+  scale_x_date(limits = c(as.Date("2017-06-01"), as.Date("2020-02-05"))) +
+  Legend +
+  theme(legend.position = "bottom")
+
+  ggsave(filename =  "4_TeslaAndBitCoinNoLAg.png", path = "3_Analysis\\1_ChartsForBlog\\")
+
+# BTC overlay + SCALING
+ScalingOfTSLA <- 13
+Combo_data %>%
+  ggplot() +
+  geom_line(aes(y = BTC_price, x = date, colour = eikonomics_colors[1]), size = 1) +
+  geom_line(aes(y = TSLA_price * ScalingOfTSLA, x = date, colour = eikonomics_colors[3]), size = 1) +
+  scale_y_continuous(sec.axis = sec_axis(~./ScalingOfTSLA, name = "TSLA stock price (USD)")) +
+  theme_minimal() +
+  ylab("BTC Price (USD)")  +
+  scale_x_date(limits = c(as.Date("2017-06-01"), as.Date("2020-02-05"))) +
+  Legend +
+  theme(legend.position = "bottom")
+
+  
+  ggsave(filename =  "5_TeslaAndBitCoinNoLAgScaled.png", path = "3_Analysis\\1_ChartsForBlog\\")
+
+# BTC overlay + SCALING + lead
+Combo_data %>%
+  ggplot() +
+  geom_line(aes(y = BTC_price, x = date, colour =eikonomics_colors[1]), size = 1) +
+  geom_line(aes(y = lead(TSLA_price, n = 548)*ScalingOfTSLA, x = date, colour = eikonomics_colors[3]), size = 1) +
+  scale_y_continuous(sec.axis = sec_axis(~./ScalingOfTSLA, name = "TSLA stock price (USD)")) +
+  theme_minimal() +
+  ylab("BTC price (USD)") +
+  Legend +
+  theme(legend.position = "bottom")
+
+
+  ggsave(filename =  "6_TeslaAndBitCoinLAgScaled.png", path = "3_Analysis\\1_ChartsForBlog\\")
+
+# BTC overlay + SCALING + lead + cutting off the Uncorrelated and the complcated
+Combo_data %>%
+  ggplot() +
+  geom_line(aes(y = BTC_price, x = date, colour =eikonomics_colors[1]), size = 1) +
+  geom_line(aes(y = lead(TSLA_price, n = 548)*ScalingOfTSLA, x = date, colour = eikonomics_colors[3]), size = 1) +
+  scale_y_continuous(sec.axis = sec_axis(~./ScalingOfTSLA, name = "TSLA stock price (USD)")) +
+  theme_minimal() +
+  ylab("BTC price (USD)")  +
+  scale_x_date(limits = c(as.Date("2017-05-20"), as.Date("2019-01-01"))) + 
+  Legend +
+  theme(legend.position = "bottom")
+
+
+  ggsave(filename =  "7_TeslaAndBitCoinLAgScaledLimitDates.png", path = "3_Analysis\\1_ChartsForBlog\\")
+
+  #### im here
+# If but her eis the thing
+# BTC overlay + SCALING + lead + cutting off the Uncorrelated and the complcated
+
+ScalingOfTSLA <- 14
+Combo_data %>%
+  ggplot() +
+  geom_line(aes(y = BTC_price, x = date, colour =eikonomics_colors[1]), size = 1) +
+  geom_line(aes(y = lead(TSLA_price, n = 155)*ScalingOfTSLA, x = date, colour = eikonomics_colors[3]), size = 1) +
+  scale_y_continuous(sec.axis = sec_axis(~./ScalingOfTSLA, name = "TSLA stock price (USD)")) +
+  theme_minimal() +
+  ylab("BTC price (USD)") +
+  Legend +
+  theme(legend.position = "bottom")
+
+  ggsave(filename =  "8_TeslaAndBitCoinLAgScaledLaterBoom.png", path = "3_Analysis\\1_ChartsForBlog\\")
+
+
+Combo_data %>%
+  ggplot() +
+  geom_line(aes(y = BTC_price, x = date, colour =eikonomics_colors[1]), size = 1) +
+  geom_line(aes(y = lead(TSLA_price, n = 155)*ScalingOfTSLA, x = date, colour = eikonomics_colors[3]), size = 1) +
+  scale_y_continuous(sec.axis = sec_axis(~./ScalingOfTSLA, name = "TSLA stock price (USD)")) +
+  theme_minimal() +
+  ylab("BTC price (USD)")  +
+  scale_x_date(limits = c(as.Date("2018-12-01"), as.Date("2020-02-05")))  +
+  Legend +
+  theme(legend.position = "bottom")
+  
+ggsave(filename =  "9_TeslaAndBitCoinLAgScaledLimitDatesNewTime.png", path = "3_Analysis\\1_ChartsForBlog\\")
+
+      
+
+  
